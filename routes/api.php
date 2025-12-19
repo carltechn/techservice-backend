@@ -112,6 +112,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // User profile
     Route::post('/profile/picture', [UserController::class, 'updateProfilePicture']);
+    Route::delete('/profile/picture', [UserController::class, 'deleteProfilePicture']);
 
     // Admin only routes
     Route::middleware('role:admin')->group(function () {

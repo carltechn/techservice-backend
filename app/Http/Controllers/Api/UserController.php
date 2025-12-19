@@ -144,7 +144,25 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Profile picture updated successfully',
-            'user' => $user->fresh(),
+            'user' => $user->fresh()->load('role'),
+        ]);
+    }
+
+    /**
+     * Delete profile picture.
+     */
+    public function deleteProfilePicture(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->profile_picture) {
+            Storage::disk('public')->delete($user->profile_picture);
+            $user->update(['profile_picture' => null]);
+        }
+
+        return response()->json([
+            'message' => 'Profile picture removed successfully',
+            'user' => $user->fresh()->load('role'),
         ]);
     }
 

@@ -58,6 +58,8 @@ class TicketController extends Controller
             'description' => 'required|string',
             'category' => 'required|in:software,hardware,network,account,other',
             'priority' => 'sometimes|in:low,medium,high,critical',
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|max:10240', // 10MB max per file
         ]);
 
         $ticket = Ticket::create([
@@ -71,6 +73,32 @@ class TicketController extends Controller
 
         // Create initial system message
         Message::createSystemMessage($ticket, 'Ticket created');
+
+        // Handle attachments - create a message with attachments if files are uploaded
+        if ($request->hasFile('attachments')) {
+            $attachments = [];
+            foreach ($request->file('attachments') as $file) {
+                $mimeType = $file->getMimeType();
+                $path = $file->store('attachments/' . $ticket->id, 'public');
+
+                $attachments[] = [
+                    'type' => Message::getAttachmentType($mimeType),
+                    'path' => $path,
+                    'url' => url('storage/' . $path),
+                    'name' => $file->getClientOriginalName(),
+                    'size' => $file->getSize(),
+                    'mime' => $mimeType,
+                ];
+            }
+
+            // Create a message with the attachments
+            Message::create([
+                'ticket_id' => $ticket->id,
+                'user_id' => $request->user()->id,
+                'content' => 'Attached files for reference:',
+                'attachments' => $attachments,
+            ]);
+        }
 
         return response()->json([
             'message' => 'Ticket created successfully',
@@ -117,11 +145,14 @@ class TicketController extends Controller
             'category' => 'sometimes|in:software,hardware,network,account,other',
         ];
 
-        // Staff can update more fields
+        // Staff can update all fields
         if ($user->isStaff()) {
             $rules['priority'] = 'sometimes|in:low,medium,high,critical';
             $rules['status'] = 'sometimes|in:open,in_progress,pending,resolved,closed';
             $rules['assigned_to'] = 'sometimes|nullable|exists:users,id';
+        } else {
+            // Regular users can only update status to in_progress or resolved on their own tickets
+            $rules['status'] = 'sometimes|in:in_progress,resolved';
         }
 
         $validated = $request->validate($rules);
