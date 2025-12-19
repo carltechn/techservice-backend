@@ -43,7 +43,18 @@ class TicketController extends Controller
             $query->where('category', $request->category);
         }
 
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(15);
+        // Sort by status priority: open -> in_progress -> pending -> resolved -> closed
+        $tickets = $query
+            ->orderByRaw("CASE
+                WHEN status = 'open' THEN 1
+                WHEN status = 'in_progress' THEN 2
+                WHEN status = 'pending' THEN 3
+                WHEN status = 'resolved' THEN 4
+                WHEN status = 'closed' THEN 5
+                ELSE 6
+            END")
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
 
         return response()->json($tickets);
     }

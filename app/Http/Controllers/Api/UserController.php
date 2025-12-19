@@ -129,7 +129,7 @@ class UserController extends Controller
     public function updateProfilePicture(Request $request): JsonResponse
     {
         $request->validate([
-            'profile_picture' => 'required|image|max:2048', // 2MB max
+            'profile_picture' => 'required|image|max:10240', // 10MB max
         ]);
 
         $user = $request->user();
